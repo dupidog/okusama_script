@@ -2,14 +2,22 @@ import glob
 import re
 import docx
 import math
+import os
+import shutil
+from win32com.client import Dispatch
 
 docx_list = glob.glob("*.docx")
+docx_list += glob.glob("*.doc")
 fo = open("output.csv", "w")
 fo.write("日期,题目,组织,文,图,文稿费,图稿费\n")
+app = Dispatch('Word.Application')
+app.visible = False
 
 for f in docx_list:
-    if re.search(r"^~\$.*\.docx", f):
+    if re.search(r"^~\$.*\.docx", f) or re.search(r"^~\$.*\.doc", f):
         continue
+
+    print('正在处理:' + f)
     
     # date
     date_obj = re.search(r"^[0-9]{8}", f)
@@ -21,42 +29,46 @@ for f in docx_list:
     # title
     title_obj = re.search(r"）.*（", f)
     if title_obj:
-        title = title_obj.group().strip("）（ ")
+        title = title_obj.group().strip("）（ ").replace('\u2022', ' ')
     else:
         title = ""
 
+    # accept all revisions and save it to temp_doc.docx
+    doc = app.Documents.Open(os.getcwd() + '/' + f)
+    doc.AcceptAllRevisions()
+    doc.SaveAs(os.getcwd() + '/temp_doc.docx', 16)
+    doc.Close()
 
     # get full text for getting further info
     text = ""
-    file = docx.Document(f)
+    file = docx.Document("temp_doc.docx")
     if file:
         for para in file.paragraphs:
             text += para.text + " "
 
     # author
-    author_all_obj = re.search(r"文[、 /]图[/:：  ]{1,3}[^ \t\n\r]{2,4}[ \t\n\r]", text)
+    author_all_obj = re.search(r"文[、 /]图[/／:：  ]{1,3}[^\t\n\r]{2,4}[ \t\n\r]", text)
     if not author_all_obj:
-        author_all_obj = re.search(r"图[、 /]文[/:：  ]{1,3}[^ \t\n\r]{2,4}[ \t\n\r]", text)
+        author_all_obj = re.search(r"图[、 /]文[/／:：  ]{1,3}[^ \t\n\r]{2,4}[ \t\n\r]", text)
     if author_all_obj:
-        author_all = author_all_obj.group().replace('/',' ').replace(':',' ').replace('：',' ').replace('\t',' ').replace('\r',' ').strip(" ").split(" ")[-1]
+        author_all = author_all_obj.group().replace('/',' ').replace('／',' ').replace(':',' ').replace('：',' ').replace('\t',' ').replace('\r',' ').strip(" ").split(" ")[-1]
         author_text = author_all
         author_photo = author_all
     else:
         author_all = ""
         author_text = ""
         author_photo = ""
-            
 
     if not author_all:
-        author_text_obj = re.search(r"文[/:： ]{1,3}[^ \t\n\r]{2,4}[ \t\n\r]", text)
+        author_text_obj = re.search(r"文[/／:： ]{1,3}[^ \t\n\r]{2,4}[ \t\n\r]", text)
         if author_text_obj:
-            author_text = author_text_obj.group().replace('/',' ').replace(':',' ').replace('：',' ').replace('\t',' ').replace('\r',' ').strip(" ").split(" ")[-1]
+            author_text = author_text_obj.group().replace('/',' ').replace('／',' ').replace(':',' ').replace('：',' ').replace('\t',' ').replace('\r',' ').strip(" ").split(" ")[-1]
         else:
             author_text = ""
 
-        author_photo_obj = re.search(r"图[/:： ]{1,3}[^ \t\n\r]{2,4}[ \t\n\r]", text)
+        author_photo_obj = re.search(r"图[/／:： ]{1,3}[^ \t\n\r]{2,4}[ \t\n\r]", text)
         if author_photo_obj:
-            author_photo = author_photo_obj.group().replace('/',' ').replace(':',' ').replace('：',' ').replace('\t',' ').replace('\r',' ').strip(" ").split(" ")[-1]
+            author_photo = author_photo_obj.group().replace('/',' ').replace('／',' ').replace(':',' ').replace('：',' ').replace('\t',' ').replace('\r',' ').strip(" ").split(" ")[-1]
         else:
             author_photo = ""
 
@@ -79,6 +91,9 @@ for f in docx_list:
     
     # write csv
     fo.write(date + "," + title + "," + title[0:2] + "," + author_text + "," + author_photo + "," + str(fee) + "," + str(photo_count*10) + "\n")
+
+    # remove temp_doc.docx
+    os.remove('temp_doc.docx')
 
 fo.close()
 
