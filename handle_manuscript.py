@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import glob
 import re
 import docx
@@ -6,19 +8,26 @@ import os
 import shutil
 from win32com.client import Dispatch
 
-docx_list = glob.glob("*.docx")
-docx_list += glob.glob("*.doc")
-fo = open("output.csv", "w")
-fo.write("日期,题目,组织,文,图,文稿费,图稿费\n")
+docx_list = glob.glob("*.doc*")
+docx_list.sort(key = lambda x: x.encode("gbk"))
 app = Dispatch('Word.Application')
 app.visible = False
 
+# open output csv file
+fo = open("output.csv", "w")
+fo.write("日期,题目,组织,文,图,文稿费,图稿费\n")
+
 for f in docx_list:
-    if re.search(r"^~\$.*\.docx", f) or re.search(r"^~\$.*\.doc", f):
+    # pick up *.docx/*.doc
+    if not re.search(r"\.docx$", f) and not re.search(r"\.doc$", f):
+        continue
+    # filter temporary files for word
+    if re.search(r"^~\$", f) or f == "temp_doc.docx":
         continue
 
+    # print info
     print('正在处理:' + f)
-    
+
     # date
     date_obj = re.search(r"^[0-9]{8}", f)
     if date_obj:
@@ -47,9 +56,9 @@ for f in docx_list:
             text += para.text + " "
 
     # author
-    author_all_obj = re.search(r"文[、 /]图[/／:：  ]{1,3}[^\t\n\r]{2,4}[ \t\n\r]", text)
+    author_all_obj = re.search(r"文[、 /]图[/／:：  ]{1,3}[^ \t\n\r]{2,7}[ \t\n\r]", text)
     if not author_all_obj:
-        author_all_obj = re.search(r"图[、 /]文[/／:：  ]{1,3}[^ \t\n\r]{2,4}[ \t\n\r]", text)
+        author_all_obj = re.search(r"图[、 /]文[/／:：  ]{1,3}[^ \t\n\r]{2,7}[ \t\n\r]", text)
     if author_all_obj:
         author_all = author_all_obj.group().replace('/',' ').replace('／',' ').replace(':',' ').replace('：',' ').replace('\t',' ').replace('\r',' ').strip(" ").split(" ")[-1]
         author_text = author_all
@@ -88,12 +97,13 @@ for f in docx_list:
 
     # photo count
     photo_count = len(glob.glob(f.split(".")[0]+"*")) - 1
-    
+
     # write csv
     fo.write(date + "," + title + "," + title[0:2] + "," + author_text + "," + author_photo + "," + str(fee) + "," + str(photo_count*10) + "\n")
 
     # remove temp_doc.docx
     os.remove('temp_doc.docx')
 
+# close output csv file
 fo.close()
 
