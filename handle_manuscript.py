@@ -69,13 +69,13 @@ for f in docx_list:
         author_photo = ""
 
     if not author_all:
-        author_text_obj = re.search(r"文[/／:： ]{1,3}[^ \t\n\r]{2,4}[ \t\n\r]", text)
+        author_text_obj = re.search(r"文[/／:： ]{1,3}[^ \t\n\r]{2,7}[ \t\n\r]", text)
         if author_text_obj:
             author_text = author_text_obj.group().replace('/',' ').replace('／',' ').replace(':',' ').replace('：',' ').replace('\t',' ').replace('\r',' ').strip(" ").split(" ")[-1]
         else:
             author_text = ""
 
-        author_photo_obj = re.search(r"图[/／:： ]{1,3}[^ \t\n\r]{2,4}[ \t\n\r]", text)
+        author_photo_obj = re.search(r"图[/／:： ]{1,3}[^ \t\n\r]{2,7}[ \t\n\r]", text)
         if author_photo_obj:
             author_photo = author_photo_obj.group().replace('/',' ').replace('／',' ').replace(':',' ').replace('：',' ').replace('\t',' ').replace('\r',' ').strip(" ").split(" ")[-1]
         else:
