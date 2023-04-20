@@ -8,6 +8,19 @@ import os
 import shutil
 from win32com.client import Dispatch
 
+org_special_list = {
+    "交大医",
+    "华东师大",
+    "中医大",
+    "电机学院",
+    "上师大",
+    "东方国际",
+    "社科院",
+    "应技大",
+    "立信金融",
+    "电力大学",
+}
+
 docx_list = glob.glob(r'*.doc*')
 docx_list.sort(key = lambda x: x.encode("gbk"))
 app = Dispatch('Word.Application')
@@ -35,12 +48,14 @@ for f in docx_list:
     else:
         date = ""
 
+    '''
     # title
     title_obj = re.search(r"）.*（", f)
     if title_obj:
         title = title_obj.group().strip("）（ ")
     else:
         title = ""
+    '''
 
     # accept all revisions and save it to temp_doc.docx
     doc = app.Documents.Open(os.getcwd() + '/' + f)
@@ -48,12 +63,15 @@ for f in docx_list:
     doc.SaveAs(os.getcwd() + '/temp_doc.docx', 16)
     doc.Close()
 
-    # get full text for getting further info
+    # get full text for getting further info, use first paragraph for title
     text = ""
+    title = ""
     file = docx.Document("temp_doc.docx")
     if file:
         for para in file.paragraphs:
             text += para.text + " "
+            if not title:
+                title = para.text.strip(" ")
 
     # author
     author_all_obj = re.search(r"[ \t\n\r]文[、/／\＼ 　]{0,1}图[/／\＼:： 　]{1,10}[^ \t\n\r]{2,20}[ \t\n\r]", text)
@@ -98,9 +116,17 @@ for f in docx_list:
     # photo count
     photo_count = len(glob.glob(f.split(".")[0]+"*")) - 1
 
+    # organization
+    for special_org in org_special_list:
+        if title.startswith(special_org):
+            org = special_org
+            break
+    else:
+        org = title[0:2]
+       
     # write csv
     try:
-        fo.write((date + "," + title + "," + title[0:2] + "," + author_text + "," + author_photo + "," + str(fee) + "," + str(photo_count*10) + "\n").replace('\u2022', ' ').replace('\u2003', ' '))
+        fo.write((date + "," + title + "," + org + "," + author_text + "," + author_photo + "," + str(fee) + "," + str(photo_count*10) + "\n").replace('\u2022', ' ').replace('\u2003', ' '))
     except:
         print("================处理文件" + f + "出错！================")
         fo.write("处理出错！")
