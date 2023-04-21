@@ -19,6 +19,13 @@ org_special_list = {
     "应技大",
     "立信金融",
     "电力大学",
+    "民建市委",
+    "民建上海市委",
+}
+
+org_replace_dict = {
+    "民建市委": "机关",
+    "民建上海市委": "机关",
 }
 
 docx_list = glob.glob(r'*.doc*')
@@ -114,15 +121,21 @@ for f in docx_list:
         fee = 100
 
     # photo count
-    photo_count = len(glob.glob(f.split(".")[0]+"*")) - 1
-
-    # organization
+    photo_count = len(glob.glob(re.sub('(\([^\(\)]*?\)|（[^（）]*?）)\..*', '', f)+"*.*")) - 1
+    
+    # special organization
     for special_org in org_special_list:
         if title.startswith(special_org):
             org = special_org
             break
     else:
         org = title[0:2]
+
+    # replace organization
+    if org in org_replace_dict:
+        org = org_replace_dict[org]
+        fee = 0
+        photo_count = 0
        
     # write csv
     try:
